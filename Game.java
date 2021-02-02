@@ -292,6 +292,11 @@ public class Game {
 	void lose() {
 		winLabel.setText("Prohrál jsi.");
 	}
+
+	void full_hand() {
+		winLabel.setText("Máš plnou ruku karet. Nemůžeš si vzít další.");
+		nextCardButton.setDisable(true);
+	}
 	
 	void setLabel(String value) {
 		winLabel.setText(value);

@@ -17,7 +17,7 @@ public class MessageInThread extends Thread {
 	BufferedReader reader;
 
 	// Is the reader running
-	public boolean isRunning;
+	public static boolean isRunning;
 	
 	// reference to the game
 	static Game game;
@@ -30,6 +30,8 @@ public class MessageInThread extends Thread {
 	static int players = 2;
 	static int game_id = 0;
 	static int state = 0;
+	static int value = 1;
+	static int pattern = 1;
 
 	
 	// Constructor
@@ -77,19 +79,24 @@ public class MessageInThread extends Thread {
 		disconnectClient("Disconnected from the server");
 	}
 
-	public synchronized void Stop() {
+	public static synchronized void Stop() {
 		isRunning = false;
+		System.out.println("Stopping the thread.");
 	}
 	
 	public static void disconnectClient(String text) {
 		//ClientTCP.sendMessage("E" + "error_occurred" + text + ClientConstants.END_CHAR);
 		System.out.println("Disconnecting");
+		System.out.println(text);
+		Stop();
 		try {
 			ClientTCP.socket.close();
+			System.out.println("Socket closing");
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		//System.exit(0);
 
 		Platform.runLater(new Runnable() {
 			@Override
@@ -118,7 +125,6 @@ public class MessageInThread extends Thread {
 		// print incoming message
 		System.out.println(
 				ClientTCP.name + " [State: "+ ClientTCP.state +" MESSAGE RECEIVED: '" + message.getMessage() + "', valid = " + message.isCorrectMessage + "]");
-		//System.out.println("nu: " + message.numberOfArguments);
 		
 		// message incorrect
 		if (!message.isCorrectMessage) {
@@ -137,7 +143,7 @@ public class MessageInThread extends Thread {
 			}
 			else {
 				System.out.println("Error logging in.");
-				disconnectClient("Error login in.");
+				disconnectClient("Error logging in.");
 			}
 			break;
 			/*********************************************** LOBBY **********************************************/		
@@ -219,7 +225,7 @@ public class MessageInThread extends Thread {
 			}
 			else {
 				System.out.println("Error: lobby, wrong message.");
-				disconnectClient("Error lobby, wrong message.");
+				disconnectClient("Error lobby, incorrect message.");
 			}
 			
 			
@@ -253,8 +259,13 @@ public class MessageInThread extends Thread {
 			}
 			else if (message.numberOfArguments == 4 && message.listOfArguments.get(0).equals("card") && ClientTCP.state == ClientState.IN_GAME) {
 				String name = message.listOfArguments.get(1);
-				int value = Integer.parseInt(message.listOfArguments.get(2));
-				int pattern = Integer.parseInt(message.listOfArguments.get(3));
+				try {
+					value = Integer.parseInt(message.listOfArguments.get(2));
+					pattern = Integer.parseInt(message.listOfArguments.get(3));
+				}catch(Exception e) {
+					disconnectClient("Incorrect game ID.");
+				}
+
 				
 				Platform.runLater(new Runnable() {
 					@Override
@@ -324,9 +335,19 @@ public class MessageInThread extends Thread {
 				});
 
 			}
+			else if (message.numberOfArguments == 1 && message.listOfArguments.get(0).equals("full_hand_of_cards") && ClientTCP.state == ClientState.IN_GAME) {
+
+				Platform.runLater(new Runnable() {
+					@Override
+					public void run() {
+						game.full_hand();
+					}
+				});
+
+			}
 			else {
 				System.out.println("Incorrect message");
-				disconnectClient("Error game incorrect message");
+				disconnectClient("Incorrect message");
 			}
 			break;		
 			
@@ -341,7 +362,17 @@ public class MessageInThread extends Thread {
 			}
 			
 			break;
-			
+
+			/*********************************************** ERROR **********************************************/
+
+			case ClientConstants.ERROR_PREFIX:
+
+				if (message.numberOfArguments == 1 && message.listOfArguments.get(0).equals("error_logging_in")) {
+					disconnectClient("Error logging in. Incorrect name.");
+
+				}
+
+				break;
 		}
 		
 	}
